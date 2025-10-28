@@ -49,5 +49,24 @@ public class ProductAction extends ActionSupport {
         addActionMessage("🗑️ Xoá sản phẩm ID: " + id + " thành công!");
         return SUCCESS;
     }
+    // 🆕 Hiển thị form sửa
+    public String edit() {
+        ProductDAO dao = new ProductDAO();
+        product = dao.getById(id);
+        if (product == null) {
+            addActionError("Không tìm thấy sản phẩm ID " + id);
+            return ERROR;
+        }
+        return "edit"; // trỏ tới trang edit_product.jsp
+    }
+
+    // 🆕 Cập nhật sản phẩm
+    public String update() {
+        ProductDAO dao = new ProductDAO();
+        dao.updateProduct(product);
+        addActionMessage("✏️ Đã cập nhật sản phẩm thành công!");
+        products = service.getProducts(lang);
+        return SUCCESS; // trở lại product.jsp
+    }
 
 }

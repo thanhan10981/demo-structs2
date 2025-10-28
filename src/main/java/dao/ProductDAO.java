@@ -125,4 +125,78 @@ public class ProductDAO {
             e.printStackTrace();
         }
     }
+    public Product getById(int id) {
+        String sql = """
+        SELECT p.ProductID, p.Price, p.Weight, pct.CategoryName,
+               pt_vi.ProductName AS NameVI, pt_vi.ProductDescription AS DescVI,
+               pt_en.ProductName AS NameEN, pt_en.ProductDescription AS DescEN,
+               p.ProductCategoryID
+        FROM Product p
+        JOIN ProductTranslation pt_vi ON p.ProductID = pt_vi.ProductID AND pt_vi.LanguageID='vi'
+        JOIN ProductTranslation pt_en ON p.ProductID = pt_en.ProductID AND pt_en.LanguageID='en'
+        JOIN ProductCategoryTranslation pct ON p.ProductCategoryID = pct.ProductCategoryID AND pct.LanguageID='vi'
+        WHERE p.ProductID = ?
+    """;
+
+        try (Connection conn = DBConnection.getConnection();
+             PreparedStatement ps = conn.prepareStatement(sql)) {
+            ps.setInt(1, id);
+            ResultSet rs = ps.executeQuery();
+            if (rs.next()) {
+                Product p = new Product();
+                p.setId(rs.getInt("ProductID"));
+                p.setPrice(rs.getDouble("Price"));
+                p.setWeight(rs.getDouble("Weight"));
+                p.setCategoryID(rs.getInt("ProductCategoryID"));
+                p.setCategoryName(rs.getString("CategoryName"));
+                p.setName_vi(rs.getString("NameVI"));
+                p.setDescription_vi(rs.getString("DescVI"));
+                p.setName_en(rs.getString("NameEN"));
+                p.setDescription_en(rs.getString("DescEN"));
+                return p;
+            }
+        } catch (SQLException e) {
+            e.printStackTrace();
+        }
+        return null;
+    }
+    public void updateProduct(Product p) {
+        String sql1 = "UPDATE Product SET Price=?, Weight=?, ProductCategoryID=? WHERE ProductID=?";
+        String sql2 = "UPDATE ProductTranslation SET ProductName=?, ProductDescription=? WHERE ProductID=? AND LanguageID=?";
+
+        try (Connection conn = DBConnection.getConnection()) {
+            conn.setAutoCommit(false);
+
+            try (PreparedStatement ps1 = conn.prepareStatement(sql1)) {
+                ps1.setDouble(1, p.getPrice());
+                ps1.setDouble(2, p.getWeight());
+                ps1.setInt(3, p.getCategoryID());
+                ps1.setInt(4, p.getId());
+                ps1.executeUpdate();
+            }
+
+            try (PreparedStatement ps2 = conn.prepareStatement(sql2)) {
+                // 🇻🇳 update tiếng Việt
+                ps2.setString(1, p.getName_vi());
+                ps2.setString(2, p.getDescription_vi());
+                ps2.setInt(3, p.getId());
+                ps2.setString(4, "vi");
+                ps2.executeUpdate();
+
+                // 🇺🇸 update tiếng Anh
+                ps2.setString(1, p.getName_en());
+                ps2.setString(2, p.getDescription_en());
+                ps2.setInt(3, p.getId());
+                ps2.setString(4, "en");
+                ps2.executeUpdate();
+            }
+
+            conn.commit();
+            System.out.println("✅ Đã cập nhật sản phẩm ID " + p.getId());
+        } catch (SQLException e) {
+            e.printStackTrace();
+        }
+    }
+
+
 }

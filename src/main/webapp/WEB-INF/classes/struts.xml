@@ -8,9 +8,18 @@
     <constant name="struts.objectFactory" value="struts"/>
 
     <package name="default" extends="struts-default">
-        <action name="product" class="action.ProductAction" method="execute">
+        <action name="index" class="action.ProductAction" method="execute">
             <result name="success">/product.jsp</result>
         </action>
+        <action name="editProduct" class="action.ProductAction" method="edit">
+            <result name="edit">/edit_product.jsp</result>
+            <result name="error">/error.jsp</result>
+        </action>
+
+        <action name="updateProduct" class="action.ProductAction" method="update">
+            <result name="success">/product.jsp</result>
+        </action>
+
         <action name="addProduct" class="action.ProductAction" method="add">
             <result name="success">/product.jsp</result>
             <result name="input">/add_product.jsp</result>

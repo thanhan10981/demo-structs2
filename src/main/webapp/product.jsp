@@ -53,10 +53,22 @@
                 <td><s:property value="price"/></td>
                 <td><s:property value="weight"/></td>
                 <td><s:property value="categoryName"/></td>
-                <td><a href="deleteProduct.action?id=<s:property value='id'/>">Xoá</a></td>
+                <td>
+                    <a href="editProduct.action?id=<s:property value='id'/>">Sửa</a> |
+                    <a href="javascript:void(0)" onclick="confirmDelete(<s:property value='id'/>)">Xoá</a>
+                </td>
+
             </tr>
         </s:iterator>
 
     </table>
 </body>
+<script>
+    function confirmDelete(productId) {
+        if (confirm('Bạn có chắc muốn xoá sản phẩm ID ' + productId + ' không?')) {
+            window.location.href = 'deleteProduct.action?id=' + productId;
+        }
+    }
+</script>
+
 </html>
