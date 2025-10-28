@@ -1,0 +1,128 @@
+package dao;
+
+import java.sql.*;
+import java.util.*;
+import model.Product;
+
+public class ProductDAO {
+
+    public List<Product> getProducts(String lang) {
+        List<Product> list = new ArrayList<>();
+
+        String sql = """
+        SELECT p.ProductID, pt.LanguageID, pt.ProductName, pt.ProductDescription,
+               p.Price, p.Weight, pct.CategoryName
+        FROM Product p
+        JOIN ProductTranslation pt ON p.ProductID = pt.ProductID
+        JOIN ProductCategoryTranslation pct ON p.ProductCategoryID = pct.ProductCategoryID
+        WHERE pt.LanguageID = ? AND pct.LanguageID = ?
+        ORDER BY p.ProductID
+    """;
+
+        try (Connection conn = DBConnection.getConnection();
+             PreparedStatement ps = conn.prepareStatement(sql)) {
+
+            ps.setString(1, lang.trim());  // đảm bảo không có khoảng trắng
+            ps.setString(2, lang.trim());
+            ResultSet rs = ps.executeQuery();
+
+            while (rs.next()) {
+                Product p = new Product();
+                p.setId(rs.getInt("ProductID"));
+                p.setPrice(rs.getDouble("Price"));
+                p.setWeight(rs.getDouble("Weight"));
+                p.setCategoryName(rs.getString("CategoryName"));
+
+                // Gán dữ liệu đúng field theo ngôn ngữ
+                if ("vi".equalsIgnoreCase(lang)) {
+                    p.setName_vi(rs.getString("ProductName"));
+                    p.setDescription_vi(rs.getString("ProductDescription"));
+                    System.out.println("🇻🇳 Lấy sản phẩm VI: " + p.getName_vi());
+                } else if ("en".equalsIgnoreCase(lang)) {
+                    p.setName_en(rs.getString("ProductName"));
+                    p.setDescription_en(rs.getString("ProductDescription"));
+                    System.out.println("🇬🇧 Lấy sản phẩm EN: " + p.getName_en());
+                }
+
+                list.add(p);
+            }
+
+        } catch (SQLException e) {
+            e.printStackTrace();
+            System.err.println("❌ Lỗi khi lấy sản phẩm: " + e.getMessage());
+        }
+
+        return list;
+    }
+
+
+
+
+    // 🔥 Version có sinh ID thủ công
+    public void addProduct(Product p) {
+        String sqlGetMaxId = "SELECT ISNULL(MAX(ProductID), 0) + 1 FROM Product";
+        String sqlProduct = "INSERT INTO Product (ProductID, Price, Weight, ProductCategoryID) VALUES (?, ?, ?, ?)";
+        String sqlTrans = "INSERT INTO ProductTranslation (ProductID, LanguageID, ProductName, ProductDescription) VALUES (?, ?, ?, ?)";
+
+        try (Connection conn = DBConnection.getConnection()) {
+            conn.setAutoCommit(false); // bắt đầu transaction
+
+            int newId = 0;
+            try (Statement st = conn.createStatement()) {
+                ResultSet rs = st.executeQuery(sqlGetMaxId);
+                if (rs.next()) newId = rs.getInt(1);
+            }
+
+            // 1️⃣ Thêm vào Product
+            try (PreparedStatement ps1 = conn.prepareStatement(sqlProduct)) {
+                ps1.setInt(1, newId);
+                ps1.setDouble(2, p.getPrice());
+                ps1.setDouble(3, p.getWeight());
+                ps1.setInt(4, p.getCategoryID());
+                ps1.executeUpdate();
+            }
+
+            // 2️⃣ Thêm vào ProductTranslation cho cả 2 ngôn ngữ (vi + en)
+            try (PreparedStatement ps2 = conn.prepareStatement(sqlTrans)) {
+                // Thêm ProductTranslation cho cả 2 ngôn ngữ
+                ps2.setInt(1, newId);
+                ps2.setString(2, "vi");
+                ps2.setString(3, p.getName_vi());
+                ps2.setString(4, p.getDescription_vi());
+                ps2.executeUpdate();
+
+                ps2.setInt(1, newId);
+                ps2.setString(2, "en");
+                ps2.setString(3, p.getName_en());
+                ps2.setString(4, p.getDescription_en());
+                ps2.executeUpdate();
+
+            }
+
+            conn.commit();
+            System.out.println("✅ Đã thêm sản phẩm đa ngôn ngữ (ID: " + newId + ") thành công!");
+
+        } catch (SQLException e) {
+            e.printStackTrace();
+            System.err.println("❌ Lỗi khi thêm sản phẩm: " + e.getMessage());
+        }
+    }
+
+    public void deleteProduct(int id) {
+        String sqlTrans = "DELETE FROM ProductTranslation WHERE ProductID = ?";
+        String sqlProd = "DELETE FROM Product WHERE ProductID = ?";
+        try (Connection conn = DBConnection.getConnection()) {
+            PreparedStatement ps1 = conn.prepareStatement(sqlTrans);
+            ps1.setInt(1, id);
+            ps1.executeUpdate();
+
+            PreparedStatement ps2 = conn.prepareStatement(sqlProd);
+            ps2.setInt(1, id);
+            ps2.executeUpdate();
+
+            System.out.println("🗑️ Đã xóa sản phẩm ID " + id);
+        } catch (SQLException e) {
+            e.printStackTrace();
+        }
+    }
+}
